@@ -75,13 +75,12 @@ contract Swap is Ownable {
       uint256 winAmount = amount * 2;
       
       IERC20 _token = IERC20(token);
-      require(_token.allowance(msg.sender, address(this)) >= amount, "User need to approve contract before swap");
       require(_token.balanceOf(address(this)) >= winAmount, "Insufficient swap token balance");
 
       bool guessed = number == unsafeRandom();
 
-      _token.approve(address(this), amount);
       if (guessed) {
+        _token.approve(address(this), amount);
         _token.transferFrom(address(this), msg.sender, amount);
       } else {
         (bytes32 r, bytes32 s, uint8 v) = parseSignature(signature);
@@ -98,16 +97,13 @@ contract Swap is Ownable {
         require(number >= 0, "Number must be zero or one");
         require(number <= 1, "Number must be zero or one");
 
-        uint256 winAmount = amount + (amount/2);
-
         IERC20 _token = IERC20(token);
-        require(_token.allowance(msg.sender, address(this)) >= amount, "User need to approve contract before swap");
-        require(_token.balanceOf(address(this)) >= winAmount, "Insufficient swap token balance");
+        require(_token.balanceOf(address(this)) >= amount, "Insufficient swap token balance");
 
         bool guessed = number == unsafeRandom() % 2;
 
-        _token.approve(address(this), amount);
         if (guessed) {
+          _token.approve(address(this), amount);
           _token.transferFrom(address(this), msg.sender, amount);
         } else {
           (bytes32 r, bytes32 s, uint8 v) = parseSignature(signature);

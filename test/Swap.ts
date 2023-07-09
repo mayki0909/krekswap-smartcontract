@@ -1,3 +1,4 @@
+import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { Signer } from "ethers";
@@ -97,7 +98,46 @@ describe('Swap', function () {
     expect(await token2.balanceOf(swapAddress)).to.be.equal(0)
   })
 
-  describe('Events', async function () {
+  it('should flip a coin', async () => {
+    const amount = BigInt(100);
+    const number = 0; // 0 for heads, 1 for tails
+
+    const user1Address = await user1.getAddress()
+    const token1Address = await token1.getAddress()
+    const swapAddress = await swap.getAddress()
+
+    await swap.connect(owner).addToken(token1Address)
+    await token1.connect(owner).mint(user1Address, amount)
+    await token1.connect(owner).mint(swapAddress, amount)
+
+    const userBalanceBefore = await token1.balanceOf(user1Address)
+    const contractBalanceBefore = await token1.balanceOf(swapAddress)
+    expect(amount).to.equal(userBalanceBefore)
+    expect(amount).to.equal(contractBalanceBefore)
+
+
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + 4200)
+    const signature = await createPermitSignature(token1, user1, swapAddress, amount, deadline)
+
+    await expect(swap.connect(user1).flipCoin(token1Address, amount, number, deadline, signature))
+          .to.emit(swap, 'FlipCoin')
+          .withArgs(token1Address, amount, number, anyValue)
+          
+          
+    const userBalanceAfter = await token1.balanceOf(user1Address)
+    const contractBalanceAfter = await token1.balanceOf(swapAddress)
+    if (userBalanceAfter == BigInt(0)) {
+      // User lost
+      expect(userBalanceBefore - amount).to.equal(userBalanceAfter)
+      expect(contractBalanceBefore + amount).to.equal(contractBalanceAfter)
+    } else {
+      // User won
+      expect(userBalanceBefore + amount).to.equal(userBalanceAfter)
+      expect(contractBalanceBefore - amount).to.equal(contractBalanceAfter)
+    }
+  })
+
+  it('should guess a number', async () => {
 
   })
 
