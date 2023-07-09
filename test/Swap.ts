@@ -1,7 +1,8 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { Signer, parseEther } from "ethers";
+import { Signer } from "ethers";
 import { Swap, Token } from "../typechain-types";
+import { createPermitSignature } from "./utils/Permit";
 
 describe('Swap', function () {
   let token1: Token;
@@ -10,13 +11,13 @@ describe('Swap', function () {
   let swap: Swap;
 
   let owner: Signer;
-  let addr1: Signer;
-  let addr2: Signer;
+  let user1: Signer;
+  let user2: Signer;
 
 
   
   beforeEach(async function () {
-    [owner, addr1, addr2] = await ethers.getSigners();
+    [owner, user1, user2] = await ethers.getSigners();
     
     const Token = await ethers.getContractFactory("Token")
     token1 = await Token.deploy("TOKEN1", "TKN1", 1000)
@@ -67,26 +68,31 @@ describe('Swap', function () {
   });
 
   it('should swap tokens', async () => {
-    const amount = 1000
-    const addr1Address = await addr1.getAddress()
+    const currentTimeSeconds = Math.floor(Date.now() / 1000)
+    const deadline = BigInt(currentTimeSeconds + 4200)
+    const amount = BigInt(1000)
+
+    const token1Address = await token1.getAddress()
+    const token2Address = await token2.getAddress()
+    const user1Address = await user1.getAddress()
     const swapAddress = await swap.getAddress()
 
-    await swap.addToken(await token1.getAddress())
-    await swap.addToken(await token2.getAddress())
+    await swap.addToken(token1Address)
+    await swap.addToken(token2Address)
 
-    await token1.connect(owner).mint(addr1Address, amount)
+    await token1.connect(owner).mint(user1Address, amount)
     await token2.connect(owner).mint(swapAddress, amount)
 
-    expect(await token1.balanceOf(addr1Address)).to.be.equal(amount)
-    expect(await token2.balanceOf(addr1Address)).to.be.equal(0)
+    expect(await token1.balanceOf(user1Address)).to.be.equal(amount)
+    expect(await token2.balanceOf(user1Address)).to.be.equal(0)
     expect(await token1.balanceOf(swapAddress)).to.be.equal(0)
     expect(await token2.balanceOf(swapAddress)).to.be.equal(amount)
 
-    await token1.connect(addr1).approve(swap.getAddress(), amount)
-    await swap.connect(addr1).swapTokens(await token1.getAddress(), await token2.getAddress(), amount)
+    const signature = await createPermitSignature(token1, user1, swapAddress, amount, deadline)
+    await swap.connect(user1).swapTokens(token1Address, token2Address, amount, deadline, signature)
 
-    expect(await token1.balanceOf(addr1Address)).to.be.equal(0)
-    expect(await token2.balanceOf(addr1Address)).to.be.equal(amount)
+    expect(await token1.balanceOf(user1Address)).to.be.equal(0)
+    expect(await token2.balanceOf(user1Address)).to.be.equal(amount)
     expect(await token1.balanceOf(swapAddress)).to.be.equal(amount)
     expect(await token2.balanceOf(swapAddress)).to.be.equal(0)
   })

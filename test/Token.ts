@@ -6,8 +6,8 @@ import { Token } from "../typechain-types";
 describe('Token', function () {
   let token: Token;
   let owner: Signer;
-  let addr1: Signer;
-  let addr2: Signer;
+  let user1: Signer;
+  let user2: Signer;
 
   const name = "Token";
   const symbol = "TKN";
@@ -15,7 +15,7 @@ describe('Token', function () {
 
 
   beforeEach(async function () {
-    [owner, addr1, addr2] = await ethers.getSigners();
+    [owner, user1, user2] = await ethers.getSigners();
 
     const Token = await ethers.getContractFactory("Token");
     token = await Token.deploy(name, symbol, initialSupply) as Token;
@@ -30,18 +30,18 @@ describe('Token', function () {
 
   it("should mint tokens", async function () {
     const amountToMint = parseEther("100");
-    await token.connect(owner).mint(await addr1.getAddress(), amountToMint);
+    await token.connect(owner).mint(await user1.getAddress(), amountToMint);
 
-    expect(await token.balanceOf(await addr1.getAddress())).to.equal(amountToMint);
+    expect(await token.balanceOf(await user1.getAddress())).to.equal(amountToMint);
   });
 
   it("should not allow minting by non-owner", async function () {
     const amountToMint = parseEther("100");
     await expect(
-      token.connect(addr1).mint(await addr2.getAddress(), amountToMint)
+      token.connect(user1).mint(await user2.getAddress(), amountToMint)
     ).to.be.revertedWith("Ownable: caller is not the owner");
 
-    expect(await token.balanceOf(await addr2.getAddress())).to.equal(0);
+    expect(await token.balanceOf(await user2.getAddress())).to.equal(0);
   });
 
   it("should burn tokens", async function () {
@@ -55,8 +55,8 @@ describe('Token', function () {
   });
 
   it("permit", async function () {
-    const address1 = await addr1.getAddress()
-    const address2 = await addr2.getAddress()
+    const address1 = await user1.getAddress()
+    const address2 = await user2.getAddress()
 
     const eip712 = await token.eip712Domain()
     //0: bytes1: fields 0x0f
@@ -101,22 +101,10 @@ describe('Token', function () {
     }
     const values = { owner: address1, spender: address2, value, nonce, deadline }
 
-    const signature = await addr1.signTypedData(domain, types, values)
+    const signature = await user1.signTypedData(domain, types, values)
     const recovered = await verifyTypedData(domain, types, values, signature)
 
     expect(recovered).to.equal(address1)
-  
-    // DEPRECATED IN ETHERS V6
-    // const { v, r, s } = ethers.utils.splitSignature(signature)
-
-    // Getting an ERROR
-    // const signatureBuffer = Buffer.from(signature, 'hex');
-    // const r = signatureBuffer.slice(0, 32).toString('hex');
-    // const s = signatureBuffer.slice(32, 64).toString('hex');
-    // const v = signatureBuffer[64].toString(10);
-    
-    // await token.connect(addr1).permit(address1, address2, value, deadline, v, r, s)
-
   })
 })
 
