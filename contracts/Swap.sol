@@ -5,12 +5,17 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 
-contract Swap is Ownable {
+import "./Helper.sol";
+
+contract Swap is Ownable, Helper {
+    struct TokenBalance {
+      address token;
+      uint256 balance;
+    }
+
     event AddToken(address token);
     event RemoveToken(address token);
     event SwapTokens(address fromToken, address toToken, uint256 amount);
-    event FlipCoin(address token, uint256 amount, uint number, bool guessed);
-    event GuessNumber(address token, uint256 amount, uint number, bool guessed);
 
     address[] private _allTokens;
     mapping(address => bool) private _supportedTokens;
@@ -21,6 +26,57 @@ contract Swap is Ownable {
 
     function isSupported(address token) external view returns (bool) {
       return _supportedTokens[token];
+    }
+
+    function allSupported() external view returns (address[] memory) {
+      address[] memory allSupportedTemp = new address[](_allTokens.length);
+      uint256 supportedCount = 0;
+      
+      // Loop to check supported coins
+      for (uint256 i = 0; i < _allTokens.length; i++) {
+        address currentAddress = _allTokens[i];
+        if (this.isActive(currentAddress)) {
+          allSupportedTemp[i] = currentAddress;
+          supportedCount++;
+        }
+      }
+
+      // Loop to resize array not all coins will always be supported
+      // We could use storage but is payable
+      address[] memory _allSupported = new address[](supportedCount);
+      for (uint256 i = 0; i < _allTokens.length; i++) {
+        _allSupported[i] = allSupportedTemp[i];
+      }
+
+      return _allSupported;
+    }
+
+    function tokenBalance (address token) external view returns (TokenBalance memory) {
+      IERC20 _token = IERC20(token);
+      uint _tokenBalance = _token.balanceOf(address(this));
+
+      return TokenBalance({
+        token: token,
+        balance: _tokenBalance
+      });
+    }
+
+    function allSupportedBalances() external view returns (TokenBalance [] memory) {
+      address[] memory _allSupported = this.allSupported();
+      TokenBalance[] memory _allSupportedBalances = new TokenBalance[](_allSupported.length);
+
+      for (uint256 i = 0; i < _allSupported.length; i++) {
+        address _tokenAddress = _allSupported[i];
+        IERC20 _token = IERC20(_tokenAddress);
+        uint _tokenBalance = _token.balanceOf(address(this));
+
+        _allSupportedBalances[i] = TokenBalance({
+          token: _tokenAddress,
+          balance: _tokenBalance
+        });
+      }
+
+      return _allSupportedBalances;
     }
 
     function isActive(address token) external view returns (bool) {
@@ -64,72 +120,5 @@ contract Swap is Ownable {
       toToken.transferFrom(address(this), msg.sender, amount);
 
       emit SwapTokens(fromTokenAddress, toTokenAddress, amount);
-    }
-
-    function guessNumber(address token, uint256 amount, uint number, uint256 deadline, bytes calldata signature) external {
-      require(_supportedTokens[token], "Token not supported");
-      require(amount > 0, "Amount must be greater than zero");
-      require(number > 0, "Number must be greater than zero");
-      require(number <= 10, "Number shuld be less than 10");
-      
-      uint256 winAmount = amount * 2;
-      
-      IERC20 _token = IERC20(token);
-      require(_token.balanceOf(address(this)) >= winAmount, "Insufficient swap token balance");
-
-      bool guessed = number == unsafeRandom();
-
-      if (guessed) {
-        _token.approve(address(this), amount);
-        _token.transferFrom(address(this), msg.sender, amount);
-      } else {
-        (bytes32 r, bytes32 s, uint8 v) = parseSignature(signature);
-        IERC20Permit(token).permit(msg.sender, address(this), amount, deadline, v, r, s);
-        _token.transferFrom(msg.sender, address(this), amount);
-      }
-
-      emit GuessNumber(token, amount, number, guessed);
-    }
-
-    function flipCoin(address token, uint256 amount, uint number, uint256 deadline, bytes calldata signature) external {
-        require(_supportedTokens[token], "Token not supported");
-        require(amount > 0, "Amount must be greater than zero");
-        require(number >= 0, "Number must be zero or one");
-        require(number <= 1, "Number must be zero or one");
-
-        IERC20 _token = IERC20(token);
-        require(_token.balanceOf(address(this)) >= amount, "Insufficient swap token balance");
-
-        bool guessed = number == unsafeRandom() % 2;
-
-        if (guessed) {
-          _token.approve(address(this), amount);
-          _token.transferFrom(address(this), msg.sender, amount);
-        } else {
-          (bytes32 r, bytes32 s, uint8 v) = parseSignature(signature);
-          IERC20Permit(token).permit(msg.sender, address(this), amount, deadline, v, r, s);
-          _token.transferFrom(msg.sender, address(this), amount);
-        }
-
-        emit FlipCoin(token, amount, number, guessed);
-    }
-
-    function unsafeRandom () private view returns (uint256) {
-        return uint256(blockhash(block.number-1)) % 10;
-    }
-
-    function parseSignature(bytes memory signature) public pure returns (bytes32 r, bytes32 s, uint8 v) {
-      require(signature.length == 65, "Invalid signature length");
-
-      assembly {
-          // Extract r by copying the first 32 bytes from the signature
-          r := mload(add(signature, 32))
-
-          // Extract s by copying the next 32 bytes from the signature
-          s := mload(add(signature, 64))
-
-          // Extract v by masking the last byte (the recovery id)
-          v := byte(0, mload(add(signature, 96)))
-      }
     }
 }
