@@ -40,6 +40,7 @@ describe('Casino', function () {
 
     await token1.connect(owner).mint(user1Address, amount)
     await token1.connect(owner).mint(casinoAddress, amount)
+    await casino.addToken(token1Address)
 
     const userBalanceBefore = await token1.balanceOf(user1Address)
     const contractBalanceBefore = await token1.balanceOf(casinoAddress)

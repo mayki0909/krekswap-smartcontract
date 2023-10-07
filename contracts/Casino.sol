@@ -13,7 +13,7 @@ contract Casino is Ownable, Helper {
   event GuessNumber(address token, uint256 amount, uint number, bool guessed);
   
   function guessNumber(address token, uint256 amount, uint number, uint256 deadline, bytes calldata signature) external {
-    // require(_supportedTokens[token], "Token not supported");
+    require(isSupported(token), "Token not supported");
     require(amount > 0, "Amount must be greater than zero");
     require(number > 0, "Number must be greater than zero");
     require(number <= 10, "Number shuld be less than 10");
@@ -38,7 +38,7 @@ contract Casino is Ownable, Helper {
   }
 
   function flipCoin(address token, uint256 amount, uint number, uint256 deadline, bytes calldata signature) external {
-      // require(_supportedTokens[token], "Token not supported");
+      require(isSupported(token), "Token not supported");
       require(amount > 0, "Amount must be greater than zero");
       require(number >= 0, "Number must be zero or one");
       require(number <= 1, "Number must be zero or one");
