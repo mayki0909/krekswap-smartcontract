@@ -4,7 +4,13 @@ The project is made with the desire to learn the Solidity language and its devel
 Many friends wanted to own their own crypto currency coin so I wanted to make them dream came true. This project connects fun and learning.
 
 ## Initializing project
-After cloning the project, you need to run ```shell yarn install``` in root folder of the project. Then you need to create `.env` file with following properties
+After cloning the project, you need to run in root folder of the project.
+```shell
+yarn install
+``` 
+## Preparing .env
+Then you need to create `.env` file with following properties
+
 ```
 LOCALHOST_URL=http://127.0.0.1:8545 # Default
 LOCALHOST_PRIVATE_KEY=
