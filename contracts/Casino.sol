@@ -18,10 +18,8 @@ contract Casino is Ownable, Helper {
     require(number > 0, "Number must be greater than zero");
     require(number <= 10, "Number shuld be less than 10");
     
-    uint256 winAmount = amount * 2;
-    
     IERC20 _token = IERC20(token);
-    require(_token.balanceOf(address(this)) >= winAmount, "Insufficient swap token balance");
+    require(_token.balanceOf(address(this)) >= amount, "Insufficient swap token balance");
 
     bool guessed = number == unsafeRandom();
 

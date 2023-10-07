@@ -70,6 +70,40 @@ describe('Casino', function () {
   })
 
   it('should guess a number', async () => {
+    const amount = BigInt(100);
+    const number = 7
 
+    const user1Address = await user1.getAddress()
+    const token1Address = await token1.getAddress()
+    const casinoAddress = await casino.getAddress()
+
+    await token1.connect(owner).mint(user1Address, amount)
+    await token1.connect(owner).mint(casinoAddress, amount)
+    await casino.addToken(token1Address)
+
+    const userBalanceBefore = await token1.balanceOf(user1Address)
+    const contractBalanceBefore = await token1.balanceOf(casinoAddress)
+    expect(amount).to.equal(userBalanceBefore)
+    expect(amount).to.equal(contractBalanceBefore)
+
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + 4200)
+    const signature = await createPermitSignature(token1, user1, casinoAddress, amount, deadline)
+
+    await expect(casino.connect(user1).guessNumber(token1Address, amount, number, deadline, signature))
+    .to.emit(casino, 'GuessNumber')
+    .withArgs(token1Address, amount, number, anyValue)
+
+    const userBalanceAfter = await token1.balanceOf(user1Address)
+    const contractBalanceAfter = await token1.balanceOf(casinoAddress)
+    
+    if (userBalanceAfter == BigInt(0)) {
+      // User lost
+      expect(userBalanceBefore - amount).to.equal(userBalanceAfter)
+      expect(contractBalanceBefore + amount).to.equal(contractBalanceAfter)
+    } else {
+      // User won
+      expect(userBalanceBefore + amount).to.equal(userBalanceAfter)
+      expect(contractBalanceBefore - amount).to.equal(contractBalanceAfter)
+    }
   })
 })

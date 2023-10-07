@@ -135,4 +135,21 @@ describe('Swap', function () {
       [token2Address, BigInt(2000)]
     ])
   })
+
+  it('should get token balance', async () => {
+    const token1Address = await token1.getAddress()
+    const swapAddress = await swap.getAddress()
+
+    expect(await swap.tokenBalance(token1Address)).to.eql([
+      token1Address, BigInt(0)
+    ])
+
+    const amount = 1000
+    await swap.addToken(token1Address)
+    await token1.connect(owner).mint(swapAddress, amount)
+
+    expect(await swap.tokenBalance(token1Address)).to.eql([
+      token1Address, BigInt(amount)
+    ])
+  })
 })
