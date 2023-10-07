@@ -1,6 +1,7 @@
 import { ethers } from "hardhat";
 
 async function main() {
+  // TODO take this variables from .env file
   const name = 'Test token'
   const symbol = 'TKK'
   const initialSupply = 10000;
