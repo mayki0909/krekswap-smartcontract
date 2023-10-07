@@ -1,4 +1,3 @@
-import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { Signer } from "ethers";
@@ -14,7 +13,6 @@ describe('Swap', function () {
   let owner: Signer;
   let user1: Signer;
   let user2: Signer;
-
 
   
   beforeEach(async function () {
@@ -98,4 +96,43 @@ describe('Swap', function () {
     expect(await token2.balanceOf(swapAddress)).to.be.equal(0)
   })
 
+  it('should get all supported tokens', async () => {
+    expect(await swap.allSupported()).to.have.members([])
+
+    const token1Address = await token1.getAddress()
+    await swap.addToken(token1Address)
+
+    expect(await swap.allSupported()).to.eql([token1Address])
+
+    const token2Address = await token2.getAddress()
+    await swap.addToken(token2Address)
+
+    expect(await swap.allSupported()).to.eql([token1Address, token2Address])
+  })
+
+  it('should get all supported balances', async () => {
+    expect(await swap.allSupportedBalances()).to.eql([])
+
+    const token1Address = await token1.getAddress()
+    await swap.addToken(token1Address)
+
+    expect(await swap.allSupportedBalances()).to.eql([[token1Address, BigInt(0)]])
+
+    const token2Address = await token2.getAddress()
+    await swap.addToken(token2Address)
+
+    expect(await swap.allSupportedBalances()).to.eql([
+      [token1Address, BigInt(0)],
+      [token2Address, BigInt(0)]
+    ])
+
+    const swapAddress = await swap.getAddress()
+    await token1.connect(owner).mint(swapAddress, 1000)
+    await token2.connect(owner).mint(swapAddress, 2000)
+
+    expect(await swap.allSupportedBalances()).to.eql([
+      [token1Address, BigInt(1000)],
+      [token2Address, BigInt(2000)]
+    ])
+  })
 })
