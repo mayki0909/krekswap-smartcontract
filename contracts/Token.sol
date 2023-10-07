@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
 contract Token is Ownable, ERC20, ERC20Burnable, ERC20Permit {
-    constructor(
+    constructor (
         string memory _name,
         string memory _symbol,
         uint256 _initialSupply
